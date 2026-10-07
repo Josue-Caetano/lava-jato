@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lava Jato - Agendamento</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="linha">
+      <h1><span id="nome-empresa">Lava Jato</span><small id="info-empresa"></small></h1>
+      <span id="saudacao"></span>
+      <button id="btn-sair" class="peq" hidden>Sair</button>
+    </div>
+  </header>
+
+  <nav class="abas" id="abas">
+    <button data-aba="agendar" class="ativa">Agendar lavagem</button>
+    <button data-aba="meus">Meus agendamentos</button>
+  </nav>
+
+  <main>
+    <!-- Login / cadastro -->
+    <section id="tela-login" class="card login-box" hidden>
+      <h2 id="titulo-login">Entrar</h2>
+      <p class="muted">Entre ou crie sua conta para agendar e pagar.</p>
+      <form id="form-login">
+        <label id="campo-nome" hidden>Nome<input name="nome" autocomplete="name"></label>
+        <label>E-mail<input name="email" type="email" required autocomplete="email"></label>
+        <label id="campo-telefone" hidden>Telefone / WhatsApp<input name="telefone" type="tel" autocomplete="tel"></label>
+        <label>Senha<input name="senha" type="password" required minlength="6" autocomplete="current-password"></label>
+        <button type="submit" style="width:100%">Entrar</button>
+      </form>
+      <p style="text-align:center"><a href="#" id="alternar-login">Não tem conta? Cadastre-se</a></p>
+    </section>
+
+    <!-- Agendar -->
+    <section data-painel="agendar">
+      <div id="aviso-fechado" class="aviso" hidden>O agendamento online está temporariamente desativado. Entre em contato pelo telefone.</div>
+      <form id="form-agendar">
+        <div class="card">
+          <h2>1. Escolha o serviço</h2>
+          <div class="servicos" id="lista-servicos"></div>
+        </div>
+        <div class="card">
+          <h2>2. Escolha o dia e horário</h2>
+          <label style="max-width:220px">Data<input type="date" id="data-agendamento" required></label>
+          <div class="horarios" id="lista-horarios"><span class="muted">Escolha um serviço e uma data.</span></div>
+        </div>
+        <div class="card">
+          <h2>3. Dados do veículo</h2>
+          <div class="linha-form">
+            <label>Placa<input name="placa" required maxlength="8" placeholder="ABC1D23" style="text-transform:uppercase"></label>
+            <label>Modelo / cor<input name="modelo" placeholder="Ex.: Onix prata"></label>
+            <label>Cupom de desconto<input name="cupom" id="cupom" placeholder="Opcional" style="text-transform:uppercase"></label>
+          </div>
+          <label>Observações<textarea name="observacoes" rows="2" placeholder="Opcional"></textarea></label>
+          <p>Total: <span class="total" id="total-agendamento">—</span> <span class="muted" id="info-desconto"></span></p>
+          <button type="submit" id="btn-agendar">Confirmar agendamento</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Meus agendamentos -->
+    <section data-painel="meus" hidden>
+      <div class="card">
+        <h2>Meus agendamentos</h2>
+        <div id="lista-meus"></div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="dlg-pagar">
+    <h2 style="margin-top:0">Pagamento</h2>
+    <p id="pagar-resumo"></p>
+    <div id="pagar-opcoes" class="acoes">
+      <button type="button" data-metodo="pix">Pagar com Pix agora</button>
+      <button type="button" class="sec" data-metodo="cartao_credito">Cartão no local</button>
+      <button type="button" class="sec" data-metodo="dinheiro">Dinheiro no local</button>
+    </div>
+    <div id="pagar-conteudo" style="margin-top:12px"></div>
+    <p style="text-align:right;margin-bottom:0"><button type="button" class="sec" id="fechar-pagar">Fechar</button></p>
+  </dialog>
+
+  <script src="/js/comum.js"></script>
+  <script src="/js/cliente.js"></script>
+</body>
+</html>

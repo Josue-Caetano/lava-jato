@@ -1,0 +1,19 @@
+{
+  "name": "lava-jato",
+  "version": "1.0.0",
+  "description": "Sistema de gestão para lava jato: agendamentos, recebimentos (Pix, cartão, dinheiro), descontos e área do cliente.",
+  "main": "src/server.js",
+  "private": true,
+  "scripts": {
+    "start": "node --no-warnings=ExperimentalWarning src/server.js",
+    "dev": "node --no-warnings=ExperimentalWarning --watch src/server.js",
+    "test": "node --no-warnings=ExperimentalWarning --test \"test/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "qrcode": "^1.5.4"
+  }
+}

@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel do Dono - Lava Jato</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="linha">
+      <h1>Painel do Dono<small id="nome-empresa"></small></h1>
+      <button id="btn-sair" class="peq" hidden>Sair</button>
+    </div>
+  </header>
+
+  <section id="tela-login" class="card login-box" hidden>
+    <h2>Entrar no painel</h2>
+    <form id="form-login">
+      <label>E-mail<input name="email" type="email" required autocomplete="username"></label>
+      <label>Senha<input name="senha" type="password" required autocomplete="current-password"></label>
+      <button type="submit" style="width:100%">Entrar</button>
+    </form>
+  </section>
+
+  <div id="app" hidden>
+    <nav class="abas" id="abas">
+      <button data-aba="painel" class="ativa">Resumo</button>
+      <button data-aba="agenda">Agenda</button>
+      <button data-aba="recebimentos">Recebimentos</button>
+      <button data-aba="servicos">Serviços</button>
+      <button data-aba="descontos">Descontos</button>
+      <button data-aba="clientes">Clientes</button>
+      <button data-aba="config">Configurações</button>
+    </nav>
+
+    <main>
+      <!-- RESUMO -->
+      <section data-painel="painel">
+        <div class="card">
+          <div class="linha-form">
+            <label>De<input type="date" id="resumo-inicio"></label>
+            <label>Até<input type="date" id="resumo-fim"></label>
+            <div class="acoes" style="margin-bottom:10px">
+              <button type="button" class="sec peq" data-periodo="hoje">Hoje</button>
+              <button type="button" class="sec peq" data-periodo="semana">7 dias</button>
+              <button type="button" class="sec peq" data-periodo="mes">Este mês</button>
+            </div>
+          </div>
+        </div>
+        <div class="grade" id="kpis"></div>
+        <div class="grade" style="margin-top:16px">
+          <div class="card"><h2>Por forma de pagamento</h2><div id="por-metodo"></div></div>
+          <div class="card"><h2>Faturamento por dia</h2><div id="por-dia"></div></div>
+        </div>
+        <div class="card"><h2>Agenda de hoje</h2><div id="agenda-hoje"></div></div>
+      </section>
+
+      <!-- AGENDA -->
+      <section data-painel="agenda" hidden>
+        <div class="card">
+          <div class="linha-form">
+            <label>Data<input type="date" id="agenda-data"></label>
+            <label>Status
+              <select id="agenda-status">
+                <option value="">Todos</option>
+                <option value="agendado">Agendado</option>
+                <option value="em_andamento">Em andamento</option>
+                <option value="concluido">Concluído</option>
+                <option value="cancelado">Cancelado</option>
+              </select>
+            </label>
+            <div style="margin-bottom:10px"><button type="button" id="btn-novo-agendamento">+ Novo agendamento</button></div>
+          </div>
+          <div id="lista-agenda"></div>
+        </div>
+      </section>
+
+      <!-- RECEBIMENTOS -->
+      <section data-painel="recebimentos" hidden>
+        <div class="card">
+          <h2>Lançar recebimento</h2>
+          <form id="form-recebimento">
+            <div class="linha-form">
+              <label>Agendamento (opcional)
+                <select name="agendamento_id" id="rec-agendamento"><option value="">Avulso (sem agendamento)</option></select>
+              </label>
+              <label>Descrição<input name="descricao" placeholder="Ex.: Lavagem completa - ABC1D23"></label>
+              <label>Valor (R$)<input name="valor" inputmode="decimal" placeholder="0,00"></label>
+            </div>
+            <div class="linha-form">
+              <label>Forma de pagamento
+                <select name="metodo" required>
+                  <option value="pix">Pix</option>
+                  <option value="cartao_credito">Cartão de crédito</option>
+                  <option value="cartao_debito">Cartão de débito</option>
+                  <option value="dinheiro">Dinheiro</option>
+                </select>
+              </label>
+              <label>Desconto<input name="desconto" inputmode="decimal" placeholder="0"></label>
+              <label>Tipo de desconto
+                <select name="desconto_tipo"><option value="fixo">R$ (valor)</option><option value="percentual">% (percentual)</option></select>
+              </label>
+              <label>Situação
+                <select name="status"><option value="pago">Pago</option><option value="pendente">Pendente (a receber)</option></select>
+              </label>
+            </div>
+            <p>Total a receber: <span class="total" id="rec-total">R$ 0,00</span></p>
+            <button type="submit">Lançar recebimento</button>
+          </form>
+        </div>
+        <div class="card">
+          <h2>Histórico</h2>
+          <div class="linha-form">
+            <label>De<input type="date" id="pag-inicio"></label>
+            <label>Até<input type="date" id="pag-fim"></label>
+            <label>Situação
+              <select id="pag-status"><option value="">Todas</option><option value="pendente">Pendentes</option><option value="pago">Pagos</option><option value="cancelado">Cancelados</option></select>
+            </label>
+          </div>
+          <div id="lista-pagamentos"></div>
+        </div>
+      </section>
+
+      <!-- SERVIÇOS -->
+      <section data-painel="servicos" hidden>
+        <div class="card">
+          <h2>Serviços e preços</h2>
+          <form id="form-servico">
+            <input type="hidden" name="sid">
+            <div class="linha-form">
+              <label>Nome<input name="nome" required></label>
+              <label>Descrição<input name="descricao"></label>
+              <label>Preço (R$)<input name="preco" required inputmode="decimal"></label>
+              <label>Duração (min)<input name="duracao_min" type="number" min="5" step="5" required></label>
+              <div class="acoes" style="margin-bottom:10px">
+                <button type="submit">Salvar</button>
+                <button type="reset" class="sec">Limpar</button>
+              </div>
+            </div>
+          </form>
+          <div id="lista-servicos"></div>
+        </div>
+      </section>
+
+      <!-- DESCONTOS -->
+      <section data-painel="descontos" hidden>
+        <div class="card">
+          <h2>Cupons de desconto</h2>
+          <p class="muted">Os clientes digitam o cupom ao agendar. Para descontos no balcão, informe o desconto ao lançar o recebimento.</p>
+          <form id="form-cupom">
+            <div class="linha-form">
+              <label>Código<input name="codigo" required placeholder="PROMO10" style="text-transform:uppercase"></label>
+              <label>Tipo<select name="tipo"><option value="percentual">Percentual (%)</option><option value="fixo">Valor fixo (R$)</option></select></label>
+              <label>Valor<input name="valor" required inputmode="decimal"></label>
+              <label>Válido até<input name="validade" type="date"></label>
+              <div style="margin-bottom:10px"><button type="submit">Criar cupom</button></div>
+            </div>
+          </form>
+          <div id="lista-cupons"></div>
+        </div>
+      </section>
+
+      <!-- CLIENTES -->
+      <section data-painel="clientes" hidden>
+        <div class="card"><h2>Clientes cadastrados</h2><div id="lista-clientes"></div></div>
+      </section>
+
+      <!-- CONFIGURAÇÕES -->
+      <section data-painel="config" hidden>
+        <form id="form-config">
+          <div class="card">
+            <h2>Empresa</h2>
+            <div class="linha-form">
+              <label>Nome do lava jato<input name="nome_empresa"></label>
+              <label>Telefone<input name="telefone_empresa"></label>
+              <label>Endereço<input name="endereco_empresa"></label>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Agendamento online</h2>
+            <label><input type="checkbox" name="agendamento_online" style="width:auto"> Permitir que clientes agendem pelo site</label>
+            <div class="linha-form">
+              <label>Abre às<input type="time" name="horario_abertura"></label>
+              <label>Fecha às<input type="time" name="horario_fechamento"></label>
+              <label>Intervalo entre horários (min)<input type="number" min="5" step="5" name="intervalo_min"></label>
+              <label>Carros ao mesmo tempo<input type="number" min="1" name="vagas_simultaneas"></label>
+              <label>Agendar com até (dias)<input type="number" min="1" name="antecedencia_max_dias"></label>
+            </div>
+            <p class="muted" style="margin:0 0 6px">Dias de funcionamento</p>
+            <div class="acoes" id="dias-semana"></div>
+          </div>
+          <div class="card">
+            <h2>Pix</h2>
+            <p class="muted">Usado para gerar o QR Code de pagamento para os clientes.</p>
+            <div class="linha-form">
+              <label>Chave Pix<input name="pix_chave" placeholder="CPF, CNPJ, e-mail, telefone ou aleatória"></label>
+              <label>Nome do recebedor<input name="pix_nome" maxlength="25"></label>
+              <label>Cidade<input name="pix_cidade" maxlength="15"></label>
+            </div>
+          </div>
+          <button type="submit">Salvar configurações</button>
+        </form>
+
+        <div class="card" style="margin-top:16px">
+          <h2>Dias bloqueados</h2>
+          <p class="muted">Feriados, folgas ou manutenção: ninguém consegue agendar nesses dias.</p>
+          <form id="form-bloqueio" class="linha-form">
+            <label>Data<input type="date" name="data" required></label>
+            <label>Motivo<input name="motivo" placeholder="Opcional"></label>
+            <div style="margin-bottom:10px"><button type="submit">Bloquear dia</button></div>
+          </form>
+          <div id="lista-bloqueios"></div>
+        </div>
+
+        <div class="card">
+          <h2>Trocar minha senha</h2>
+          <form id="form-senha" class="linha-form">
+            <label>Senha atual<input type="password" name="atual" required autocomplete="current-password"></label>
+            <label>Nova senha<input type="password" name="nova" required minlength="6" autocomplete="new-password"></label>
+            <div style="margin-bottom:10px"><button type="submit">Alterar senha</button></div>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="dlg-agendamento">
+    <h2 style="margin-top:0">Novo agendamento</h2>
+    <form id="form-agendamento">
+      <div class="linha-form">
+        <label>Cliente<input name="nome_cliente" required></label>
+        <label>Telefone<input name="telefone" type="tel"></label>
+      </div>
+      <div class="linha-form">
+        <label>Placa<input name="placa" required style="text-transform:uppercase"></label>
+        <label>Modelo<input name="modelo"></label>
+      </div>
+      <label>Serviço<select name="servico_id" id="ag-servico" required></select></label>
+      <div class="linha-form">
+        <label>Data<input type="date" name="data" required></label>
+        <label>Hora<input type="time" name="hora" required></label>
+        <label>Desconto (R$)<input name="desconto" inputmode="decimal" placeholder="0"></label>
+      </div>
+      <label>Observações<input name="observacoes"></label>
+      <div class="acoes" style="justify-content:flex-end">
+        <button type="button" class="sec" id="cancelar-agendamento">Cancelar</button>
+        <button type="submit">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>window.CHAVE_SESSAO = 'lavajato_admin';</script>
+  <script src="/js/comum.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>
