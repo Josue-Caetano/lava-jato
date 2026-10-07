@@ -49,12 +49,8 @@ $('#form-login').onsubmit = (ev) => tentar(async () => {
   ev.preventDefault();
   const dados = dadosForm(ev.target);
   const r = estado.modoCadastro
-    ? await api('POST', '/api/auth/cadastro', dados)
-    : await api('POST', '/api/auth/login', dados);
-  if (r.usuario.papel !== 'cliente') {
-    toast('Esta é a conta do dono. Use o painel em /admin.', true);
-    return;
-  }
+    ? await api('POST', 'auth/cadastro', dados)
+    : await api('POST', 'auth/login', dados);
   sessao.salvar(r);
   atualizarCabecalho();
   fecharLogin();
@@ -64,8 +60,8 @@ $('#form-login').onsubmit = (ev) => tentar(async () => {
   if (acao) await acao();
 });
 
-$('#btn-sair').onclick = () => {
-  sessao.limpar();
+$('#btn-sair').onclick = async () => {
+  await sair();
   atualizarCabecalho();
   $('#lista-meus').innerHTML = '';
   toast('Você saiu da sua conta');
@@ -100,7 +96,7 @@ async function carregarHorarios() {
     return;
   }
   box.innerHTML = '<span class="muted">Carregando…</span>';
-  const horas = await tentar(() => api('GET', `/api/publico/horarios?data=${data}&servico_id=${estado.servico.id}`));
+  const horas = await tentar(() => api('GET', `publico/horarios?data=${data}&servico_id=${estado.servico.id}`));
   if (!horas) return;
   box.innerHTML = horas.length
     ? horas.map((h) => `<button type="button" data-hora="${h}">${h}</button>`).join('')
@@ -136,7 +132,7 @@ $('#cupom').onchange = async (ev) => {
   const codigo = ev.target.value.trim();
   estado.cupom = null;
   if (codigo) {
-    estado.cupom = await tentar(() => api('GET', `/api/publico/cupom/${encodeURIComponent(codigo)}`)) || null;
+    estado.cupom = await tentar(() => api('GET', `publico/cupom/${encodeURIComponent(codigo)}`)) || null;
     if (estado.cupom) toast('Cupom aplicado!');
   }
   atualizarTotal();
@@ -148,7 +144,7 @@ $('#form-agendar').onsubmit = (ev) => {
   if (!estado.hora) return toast('Escolha um horário', true);
   exigirLogin(() => tentar(async () => {
     const dados = dadosForm(ev.target);
-    const ag = await api('POST', '/api/cliente/agendamentos', {
+    const ag = await api('POST', 'cliente/agendamentos', {
       ...dados,
       cupom: estado.cupom ? estado.cupom.codigo : '',
       servico_id: estado.servico.id,
@@ -171,7 +167,7 @@ async function carregarMeus() {
     $('#btn-entrar').onclick = () => exigirLogin(carregarMeus);
     return;
   }
-  const lista = await tentar(() => api('GET', '/api/cliente/agendamentos'));
+  const lista = await tentar(() => api('GET', 'cliente/agendamentos'));
   if (!lista) return;
   window.meusAgendamentos = lista;
   $('#lista-meus').innerHTML = lista.length ? `
@@ -202,7 +198,7 @@ $('#lista-meus').onclick = (ev) => {
     abrirPagamento(window.meusAgendamentos.find((a) => a.id === Number(pagar.dataset.pagar)));
   } else if (cancelar && confirm('Cancelar este agendamento?')) {
     tentar(async () => {
-      await api('POST', `/api/cliente/agendamentos/${cancelar.dataset.cancelar}/cancelar`);
+      await api('POST', `cliente/agendamentos/${cancelar.dataset.cancelar}/cancelar`);
       toast('Agendamento cancelado');
       carregarMeus();
     });
@@ -219,7 +215,7 @@ function abrirPagamento(ag) {
   $('#pagar-conteudo').innerHTML = '';
   if (ag.pagamento_pendente_id) {
     tentar(async () => {
-      const p = await api('GET', `/api/cliente/pagamentos/${ag.pagamento_pendente_id}`);
+      const p = await api('GET', `cliente/pagamentos/${ag.pagamento_pendente_id}`);
       if (p.metodo === 'pix') mostrarPix($('#pagar-conteudo'), p);
     });
   }
@@ -230,7 +226,7 @@ $('#pagar-opcoes').onclick = (ev) => {
   const b = ev.target.closest('[data-metodo]');
   if (!b) return;
   tentar(async () => {
-    const p = await api('POST', `/api/cliente/agendamentos/${estado.agendamentoPagar.id}/pagamento`, { metodo: b.dataset.metodo });
+    const p = await api('POST', `cliente/agendamentos/${estado.agendamentoPagar.id}/pagamento`, { metodo: b.dataset.metodo });
     if (p.metodo === 'pix') {
       mostrarPix($('#pagar-conteudo'), p);
     } else {
@@ -249,9 +245,11 @@ abas($('#abas'), (aba) => { if (aba === 'meus') carregarMeus(); });
 
 (async function iniciar() {
   atualizarCabecalho();
+  await conferirSessao();
+  atualizarCabecalho();
   const [info, servicos] = await Promise.all([
-    api('GET', '/api/publico/info'),
-    api('GET', '/api/publico/servicos'),
+    api('GET', 'publico/info'),
+    api('GET', 'publico/servicos'),
   ]);
   estado.info = info;
   estado.servicos = servicos;

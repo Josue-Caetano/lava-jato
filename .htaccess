@@ -1,0 +1,15 @@
+# Bloqueia acesso direto ao código do servidor e aos testes
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^(app|tests)(/|$) - [F,L]
+</IfModule>
+<FilesMatch "\.(md|sql|log)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Deny from all
+  </IfModule>
+</FilesMatch>
+DirectoryIndex index.html index.php
+Options -Indexes

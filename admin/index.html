@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Painel do Dono - Lava Jato</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
   <header class="topo">
@@ -13,6 +13,17 @@
       <button id="btn-sair" class="peq" hidden>Sair</button>
     </div>
   </header>
+
+  <section id="tela-primeiro-acesso" class="card login-box" hidden>
+    <h2>Bem-vindo! Crie a conta do dono</h2>
+    <p class="muted">Este é o primeiro acesso ao sistema. A conta criada aqui é a única com acesso ao painel.</p>
+    <form id="form-primeiro-acesso">
+      <label>Seu nome<input name="nome" required autocomplete="name"></label>
+      <label>E-mail<input name="email" type="email" required autocomplete="username"></label>
+      <label>Senha (mínimo 6 caracteres)<input name="senha" type="password" required minlength="6" autocomplete="new-password"></label>
+      <button type="submit" style="width:100%">Criar conta e entrar</button>
+    </form>
+  </section>
 
   <section id="tela-login" class="card login-box" hidden>
     <h2>Entrar no painel</h2>
@@ -250,8 +261,8 @@
     </form>
   </dialog>
 
-  <script>window.CHAVE_SESSAO = 'lavajato_admin';</script>
-  <script src="/js/comum.js"></script>
-  <script src="/js/admin.js"></script>
+  <script>window.AREA = 'admin'; window.API_BASE = '../';</script>
+  <script src="../js/comum.js"></script>
+  <script src="../js/admin.js"></script>
 </body>
 </html>

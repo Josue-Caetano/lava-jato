@@ -1,7 +1,11 @@
 // Utilitários compartilhados entre a área do cliente e o painel do dono.
 
-const CHAVE_SESSAO = window.CHAVE_SESSAO || 'lavajato_sessao';
+// AREA: 'cliente' (site) ou 'admin' (painel). API_BASE: caminho até o api.php.
+const AREA = window.AREA || 'cliente';
+const API_BASE = window.API_BASE || '';
+const CHAVE_SESSAO = `lavajato_${AREA}`;
 
+// Guarda só os dados do usuário para exibir na tela; quem autentica é o cookie de sessão.
 const sessao = {
   ler() {
     try { return JSON.parse(localStorage.getItem(CHAVE_SESSAO)) || null; } catch { return null; }
@@ -14,23 +18,48 @@ const sessao = {
   },
 };
 
-async function api(metodo, url, corpo) {
-  const s = sessao.ler();
+/** Chama a API. Ex.: api('GET', 'publico/horarios?data=2026-10-08&servico_id=1') */
+async function api(metodo, rota, corpo) {
+  const [caminho, query] = rota.split('?');
+  const url = `${API_BASE}api.php?r=${encodeURIComponent(caminho)}${query ? '&' + query : ''}`;
   const resp = await fetch(url, {
     method: metodo,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(s ? { Authorization: `Bearer ${s.token}` } : {}),
-    },
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-Area': AREA },
     body: corpo === undefined ? undefined : JSON.stringify(corpo),
   });
-  const dados = await resp.json().catch(() => ({}));
-  if (resp.status === 401 && s) {
+  const dados = await resp.json().catch(() => ({ erro: `Erro ${resp.status} no servidor` }));
+  if (resp.status === 401 && sessao.ler() && !rota.startsWith('auth/login')) {
     sessao.limpar();
     if (window.aoExpirarSessao) window.aoExpirarSessao();
   }
   if (!resp.ok) throw new Error(dados.erro || 'Erro na comunicação com o servidor');
   return dados;
+}
+
+/** Confere no servidor se a sessão guardada ainda vale. */
+async function conferirSessao() {
+  if (!sessao.ler()) return null;
+  try {
+    const u = await api('GET', 'auth/eu');
+    sessao.salvar({ usuario: u });
+    return u;
+  } catch {
+    sessao.limpar();
+    return null;
+  }
+}
+
+async function sair() {
+  await api('POST', 'auth/sair').catch(() => {});
+  sessao.limpar();
+}
+
+function qrCodeSvg(texto) {
+  const qr = qrcode(0, 'M');
+  qr.addData(texto);
+  qr.make();
+  return qr.createSvgTag({ cellSize: 5, margin: 4, scalable: true });
 }
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -104,7 +133,7 @@ function mostrarPix(container, pagamento) {
     <div class="pix-box">
       <p>Escaneie o QR Code no app do seu banco ou use o Pix Copia e Cola.</p>
       <p class="total">${dinheiro(pagamento.valor_liquido_centavos)}</p>
-      <img src="${pagamento.pix_qrcode}" alt="QR Code Pix">
+      <div class="qr" role="img" aria-label="QR Code Pix">${qrCodeSvg(pagamento.pix_copia_cola)}</div>
       <label>Pix Copia e Cola
         <textarea readonly>${esc(pagamento.pix_copia_cola)}</textarea>
       </label>

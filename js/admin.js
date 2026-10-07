@@ -7,6 +7,7 @@ const tabela = (cab, linhas) => `<div class="tabela-rolagem"><table><thead><tr>$
 
 // ----------------------------------------------------------------- sessão
 function mostrarApp(logado) {
+  $('#tela-primeiro-acesso').hidden = true;
   $('#tela-login').hidden = logado;
   $('#app').hidden = !logado;
   $('#btn-sair').hidden = !logado;
@@ -16,14 +17,22 @@ window.aoExpirarSessao = () => { mostrarApp(false); toast('Sessão expirada, ent
 
 $('#form-login').onsubmit = (ev) => tentar(async () => {
   ev.preventDefault();
-  const r = await api('POST', '/api/auth/login', dadosForm(ev.target));
-  if (r.usuario.papel !== 'admin') throw new Error('Esta conta não tem acesso ao painel');
+  const r = await api('POST', 'auth/login', dadosForm(ev.target));
   sessao.salvar(r);
   ev.target.reset();
   iniciar();
 });
 
-$('#btn-sair').onclick = () => { sessao.limpar(); mostrarApp(false); };
+$('#form-primeiro-acesso').onsubmit = (ev) => tentar(async () => {
+  ev.preventDefault();
+  const r = await api('POST', 'auth/primeiro-acesso', dadosForm(ev.target));
+  sessao.salvar(r);
+  ev.target.reset();
+  toast('Conta criada! Agora configure sua chave Pix em Configurações.');
+  iniciar();
+});
+
+$('#btn-sair').onclick = async () => { await sair(); mostrarApp(false); };
 
 // ----------------------------------------------------------------- resumo
 function definirPeriodo(tipo) {
@@ -37,7 +46,7 @@ document.querySelectorAll('[data-periodo]').forEach((b) => { b.onclick = () => d
 $('#resumo-inicio').onchange = $('#resumo-fim').onchange = () => carregarResumo();
 
 async function carregarResumo() {
-  const r = await tentar(() => api('GET', `/api/admin/resumo?inicio=${$('#resumo-inicio').value}&fim=${$('#resumo-fim').value}`));
+  const r = await tentar(() => api('GET', `admin/resumo?inicio=${$('#resumo-inicio').value}&fim=${$('#resumo-fim').value}`));
   if (!r) return;
   const ticket = r.quantidade ? Math.round(r.liquido_centavos / r.quantidade) : 0;
   $('#kpis').innerHTML = [
@@ -59,7 +68,7 @@ async function carregarResumo() {
       `<div style="height:${Math.max(2, (d.liquido_centavos / max) * 100)}%" data-tip="${dataBR(d.dia)}: ${dinheiro(d.liquido_centavos)}"></div>`).join('')}</div>`
     : vazio('Sem dados no período.');
 
-  const hoje = await tentar(() => api('GET', `/api/admin/agendamentos?data=${hojeISO()}`));
+  const hoje = await tentar(() => api('GET', `admin/agendamentos?data=${hojeISO()}`));
   if (hoje) $('#agenda-hoje').innerHTML = tabelaAgenda(hoje.filter((a) => a.status !== 'cancelado'));
 }
 
@@ -89,7 +98,7 @@ function tabelaAgenda(lista) {
 }
 
 async function carregarAgenda() {
-  const lista = await tentar(() => api('GET', `/api/admin/agendamentos?data=${$('#agenda-data').value}&status=${$('#agenda-status').value}`));
+  const lista = await tentar(() => api('GET', `admin/agendamentos?data=${$('#agenda-data').value}&status=${$('#agenda-status').value}`));
   if (lista) $('#lista-agenda').innerHTML = tabelaAgenda(lista);
 }
 $('#agenda-data').onchange = $('#agenda-status').onchange = carregarAgenda;
@@ -100,7 +109,7 @@ document.addEventListener('click', (ev) => {
   if (st) {
     if (st.dataset.status === 'cancelado' && !confirm('Cancelar este agendamento?')) return;
     tentar(async () => {
-      await api('PATCH', `/api/admin/agendamentos/${st.dataset.id}`, { status: st.dataset.status });
+      await api('PATCH', `admin/agendamentos/${st.dataset.id}`, { status: st.dataset.status });
       toast('Agendamento atualizado');
       carregarAgenda();
       carregarResumo();
@@ -121,7 +130,7 @@ $('#btn-novo-agendamento').onclick = () => {
 $('#cancelar-agendamento').onclick = () => $('#dlg-agendamento').close();
 $('#form-agendamento').onsubmit = (ev) => tentar(async () => {
   ev.preventDefault();
-  const ag = await api('POST', '/api/admin/agendamentos', dadosForm(ev.target));
+  const ag = await api('POST', 'admin/agendamentos', dadosForm(ev.target));
   $('#dlg-agendamento').close();
   toast('Agendamento criado');
   $('#agenda-data').value = ag.data;
@@ -130,7 +139,7 @@ $('#form-agendamento').onsubmit = (ev) => tentar(async () => {
 
 // ----------------------------------------------------------- recebimentos
 async function carregarAReceber() {
-  const lista = await tentar(() => api('GET', `/api/admin/agendamentos?inicio=${hojeISO(-60)}&fim=${hojeISO(60)}`));
+  const lista = await tentar(() => api('GET', `admin/agendamentos?inicio=${hojeISO(-60)}&fim=${hojeISO(60)}`));
   if (!lista) return;
   cache.aReceber = lista.filter((a) => a.status !== 'cancelado' && a.pago_centavos < a.total_centavos);
   const sel = $('#rec-agendamento');
@@ -177,7 +186,7 @@ async function irParaRecebimento(agendamentoId) {
 
 $('#form-recebimento').onsubmit = (ev) => tentar(async () => {
   ev.preventDefault();
-  const p = await api('POST', '/api/admin/pagamentos', dadosForm(ev.target));
+  const p = await api('POST', 'admin/pagamentos', dadosForm(ev.target));
   toast(`Recebimento de ${dinheiro(p.valor_liquido_centavos)} lançado`);
   ev.target.reset();
   $('#rec-agendamento').onchange();
@@ -188,7 +197,7 @@ $('#form-recebimento').onsubmit = (ev) => tentar(async () => {
 
 async function carregarPagamentos() {
   const q = new URLSearchParams({ inicio: $('#pag-inicio').value, fim: $('#pag-fim').value, status: $('#pag-status').value });
-  const lista = await tentar(() => api('GET', `/api/admin/pagamentos?${q}`));
+  const lista = await tentar(() => api('GET', `admin/pagamentos?${q}`));
   if (!lista) return;
   $('#lista-pagamentos').innerHTML = lista.length ? tabela(
     '<th>Data</th><th>Descrição</th><th>Forma</th><th class="num">Bruto</th><th class="num">Desconto</th><th class="num">Líquido</th><th>Situação</th><th></th>',
@@ -213,7 +222,7 @@ $('#lista-pagamentos').onclick = (ev) => {
   if (!b) return;
   if (b.dataset.novo === 'cancelado' && !confirm('Cancelar esta cobrança?')) return;
   tentar(async () => {
-    await api('PATCH', `/api/admin/pagamentos/${b.dataset.pag}`, { status: b.dataset.novo });
+    await api('PATCH', `admin/pagamentos/${b.dataset.pag}`, { status: b.dataset.novo });
     toast(b.dataset.novo === 'pago' ? 'Pagamento confirmado' : 'Cobrança cancelada');
     carregarPagamentos();
     carregarAReceber();
@@ -223,7 +232,7 @@ $('#lista-pagamentos').onclick = (ev) => {
 
 // ---------------------------------------------------------------- serviços
 async function carregarServicos() {
-  cache.servicos = await tentar(() => api('GET', '/api/admin/servicos')) || cache.servicos;
+  cache.servicos = await tentar(() => api('GET', 'admin/servicos')) || cache.servicos;
   $('#lista-servicos').innerHTML = tabela(
     '<th>Serviço</th><th class="num">Preço</th><th class="num">Duração</th><th>Situação</th><th></th>',
     cache.servicos.map((s) => `<tr>
@@ -257,7 +266,7 @@ $('#lista-servicos').onclick = (ev) => {
   } else if (at) {
     const s = cache.servicos.find((x) => x.id === Number(at.dataset.ativar));
     tentar(async () => {
-      await api('PUT', `/api/admin/servicos/${s.id}`, corpoServico(s, { ativo: !s.ativo }));
+      await api('PUT', `admin/servicos/${s.id}`, corpoServico(s, { ativo: !s.ativo }));
       carregarServicos();
     });
   }
@@ -269,9 +278,9 @@ $('#form-servico').onsubmit = (ev) => tentar(async () => {
   d.duracao_min = Number(d.duracao_min);
   if (d.sid) {
     const s = cache.servicos.find((x) => x.id === Number(d.sid));
-    await api('PUT', `/api/admin/servicos/${d.sid}`, { ...d, ativo: Boolean(s.ativo) });
+    await api('PUT', `admin/servicos/${d.sid}`, { ...d, ativo: Boolean(s.ativo) });
   } else {
-    await api('POST', '/api/admin/servicos', d);
+    await api('POST', 'admin/servicos', d);
   }
   toast('Serviço salvo');
   ev.target.reset();
@@ -281,7 +290,7 @@ $('#form-servico').onsubmit = (ev) => tentar(async () => {
 
 // ---------------------------------------------------------------- cupons
 async function carregarCupons() {
-  const lista = await tentar(() => api('GET', '/api/admin/cupons'));
+  const lista = await tentar(() => api('GET', 'admin/cupons'));
   if (!lista) return;
   $('#lista-cupons').innerHTML = lista.length ? tabela(
     '<th>Código</th><th>Desconto</th><th>Validade</th><th>Situação</th><th></th>',
@@ -298,14 +307,14 @@ async function carregarCupons() {
 $('#lista-cupons').onclick = (ev) => {
   const b = ev.target.closest('[data-cupom]');
   if (b) tentar(async () => {
-    await api('PATCH', `/api/admin/cupons/${b.dataset.cupom}`, { ativo: b.dataset.ativo === '1' });
+    await api('PATCH', `admin/cupons/${b.dataset.cupom}`, { ativo: b.dataset.ativo === '1' });
     carregarCupons();
   });
 };
 
 $('#form-cupom').onsubmit = (ev) => tentar(async () => {
   ev.preventDefault();
-  await api('POST', '/api/admin/cupons', dadosForm(ev.target));
+  await api('POST', 'admin/cupons', dadosForm(ev.target));
   toast('Cupom criado');
   ev.target.reset();
   carregarCupons();
@@ -313,7 +322,7 @@ $('#form-cupom').onsubmit = (ev) => tentar(async () => {
 
 // ---------------------------------------------------------------- clientes
 async function carregarClientes() {
-  const lista = await tentar(() => api('GET', '/api/admin/clientes'));
+  const lista = await tentar(() => api('GET', 'admin/clientes'));
   if (!lista) return;
   $('#lista-clientes').innerHTML = lista.length ? tabela(
     '<th>Nome</th><th>E-mail</th><th>Telefone</th><th class="num">Agendamentos</th><th>Cliente desde</th>',
@@ -327,7 +336,7 @@ $('#dias-semana').innerHTML = DIAS.map((d, i) =>
   `<label style="margin:0"><input type="checkbox" value="${i}" style="width:auto"> ${d}</label>`).join('');
 
 async function carregarConfig() {
-  const c = await tentar(() => api('GET', '/api/admin/config'));
+  const c = await tentar(() => api('GET', 'admin/config'));
   if (!c) return;
   const f = $('#form-config');
   for (const [k, v] of Object.entries(c)) {
@@ -347,13 +356,13 @@ $('#form-config').onsubmit = (ev) => tentar(async () => {
   d.agendamento_online = ev.target.agendamento_online.checked ? '1' : '0';
   d.dias_funcionamento = [...$('#dias-semana').querySelectorAll('input:checked')].map((i) => i.value).join(',');
   if (!d.dias_funcionamento) throw new Error('Selecione ao menos um dia de funcionamento');
-  await api('PUT', '/api/admin/config', d);
+  await api('PUT', 'admin/config', d);
   toast('Configurações salvas');
   carregarConfig();
 });
 
 async function carregarBloqueios() {
-  const lista = await tentar(() => api('GET', '/api/admin/bloqueios'));
+  const lista = await tentar(() => api('GET', 'admin/bloqueios'));
   if (!lista) return;
   $('#lista-bloqueios').innerHTML = lista.length ? tabela('<th>Data</th><th>Motivo</th><th></th>',
     lista.map((b) => `<tr><td>${dataBR(b.data)}</td><td>${esc(b.motivo || '')}</td>
@@ -363,19 +372,19 @@ async function carregarBloqueios() {
 
 $('#form-bloqueio').onsubmit = (ev) => tentar(async () => {
   ev.preventDefault();
-  await api('POST', '/api/admin/bloqueios', dadosForm(ev.target));
+  await api('POST', 'admin/bloqueios', dadosForm(ev.target));
   ev.target.reset();
   toast('Dia bloqueado');
   carregarBloqueios();
 });
 $('#lista-bloqueios').onclick = (ev) => {
   const b = ev.target.closest('[data-desbloquear]');
-  if (b) tentar(async () => { await api('DELETE', `/api/admin/bloqueios/${b.dataset.desbloquear}`); carregarBloqueios(); });
+  if (b) tentar(async () => { await api('DELETE', `admin/bloqueios/${b.dataset.desbloquear}`); carregarBloqueios(); });
 };
 
 $('#form-senha').onsubmit = (ev) => tentar(async () => {
   ev.preventDefault();
-  await api('POST', '/api/auth/senha', dadosForm(ev.target));
+  await api('POST', 'auth/senha', dadosForm(ev.target));
   ev.target.reset();
   toast('Senha alterada');
 });
@@ -393,15 +402,20 @@ const carregarAba = {
 abas($('#abas'), (aba) => carregarAba[aba]());
 
 async function iniciar() {
-  const s = sessao.ler();
-  if (!s || s.usuario.papel !== 'admin') return mostrarApp(false);
+  const info = await tentar(() => api('GET', 'publico/info'));
+  if (info && info.precisa_configurar) {
+    mostrarApp(false);
+    $('#tela-login').hidden = true;
+    $('#tela-primeiro-acesso').hidden = false;
+    return;
+  }
+  if (!(await conferirSessao())) return mostrarApp(false);
   mostrarApp(true);
   $('#agenda-data').value = hojeISO();
   $('#pag-inicio').value = hojeISO().slice(0, 8) + '01';
   $('#pag-fim').value = hojeISO();
   definirPeriodo('hoje');
   carregarServicos();
-  const info = await tentar(() => api('GET', '/api/publico/info'));
   if (info) $('#nome-empresa').textContent = info.nome_empresa;
 }
 
